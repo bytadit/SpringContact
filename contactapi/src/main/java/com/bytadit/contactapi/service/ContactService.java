@@ -22,6 +22,7 @@ import java.util.function.Function;
 import static com.bytadit.contactapi.constant.Constant.PHOTO_DIRECTORY;
 import static java.nio.file.StandardCopyOption.REPLACE_EXISTING;
 
+
 @Service
 @Slf4j
 @Transactional(rollbackOn = Exception.class)
@@ -37,7 +38,7 @@ public class ContactService {
         return contactRepo.findById(id).orElseThrow(() -> new RuntimeException("Contact not found"));
     }
 
-    public Contact createContact(Contact contact){
+    public Contact createContact(Contact contact) {
         return contactRepo.save(contact);
     }
 
@@ -45,7 +46,7 @@ public class ContactService {
         contactRepo.delete(contact);
     }
 
-    public String uploadPhoto(String id, MultipartFile file){
+    public String uploadPhoto(String id, MultipartFile file) {
         log.info("Saving picture for user ID: {}", id);
         Contact contact = getContact(id);
         String photoUrl = photoFunction.apply(id, file);
@@ -58,19 +59,16 @@ public class ContactService {
             .map(name -> "." + name.substring(filename.lastIndexOf(".") + 1)).orElse(".png");
 
     private final BiFunction<String, MultipartFile, String> photoFunction = (id, image) -> {
-        String fileName = id + fileExtension.apply(image.getOriginalFilename());
-        try{
+        String filename = id + fileExtension.apply(image.getOriginalFilename());
+        try {
             Path fileStorageLocation = Paths.get(PHOTO_DIRECTORY).toAbsolutePath().normalize();
-            if(Files.exists(fileStorageLocation)) {
-                Files.createDirectories(fileStorageLocation);
-            }
-            Files.copy(image.getInputStream(), fileStorageLocation.resolve(fileName), REPLACE_EXISTING);
+            if(!Files.exists(fileStorageLocation)) { Files.createDirectories(fileStorageLocation); }
+            Files.copy(image.getInputStream(), fileStorageLocation.resolve(filename), REPLACE_EXISTING);
             return ServletUriComponentsBuilder
                     .fromCurrentContextPath()
-                    .path("/contact/image" + fileName)
-                    .toUriString();
-        }catch(Exception e){
-            throw new RuntimeException("Error occured while uploading photo");
+                    .path("/contacts/image/" + filename).toUriString();
+        }catch (Exception exception) {
+            throw new RuntimeException("Unable to save image");
         }
     };
 }
